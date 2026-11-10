@@ -1,27 +1,32 @@
 {
-  "name": "martian-survival-guide",
+  "name": "marswalk",
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
-    "build": "next build",
-    "start": "next start",
-    "lint": "eslint"
+    "dev": "npm run copy:cesium && next dev",
+    "build": "npm run copy:cesium && next build",
+    "lint": "eslint",
+    "copy:cesium": "node scripts/copy-cesium-assets.mjs",
+    "data": "python scripts/fetch_trek_data.py",
+    "preview": "npx serve out"
   },
   "dependencies": {
+    "cesium": "^1.146.0",
+    "lucide-react": "^1.71.0",
+    "next": "15.5.29",
     "react": "19.1.0",
-    "react-dom": "19.1.0",
-    "next": "15.5.29"
+    "react-dom": "19.1.0"
   },
   "devDependencies": {
-    "typescript": "^5",
+    "@eslint/eslintrc": "^3",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
-    "@tailwindcss/postcss": "^4",
-    "tailwindcss": "^4",
+    "autoprefixer": "^10.6.2",
     "eslint": "^9",
     "eslint-config-next": "15.5.29",
-    "@eslint/eslintrc": "^3"
+    "postcss": "^8.5.32",
+    "tailwindcss": "^3.4.17",
+    "typescript": "^5"
   }
 }

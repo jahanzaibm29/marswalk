@@ -1,103 +1,98 @@
-import Image from "next/image";
+"use client";
 
-export default function Home() {
+import dynamic from "next/dynamic";
+import { useCallback, useEffect, useState } from "react";
+import { Crosshair, Home, PanelLeftClose, PanelLeftOpen } from "lucide-react";
+import LayerPanel from "@/components/layers/LayerPanel";
+import PoiList from "@/components/poi/PoiList";
+import PoiPanel from "@/components/poi/PoiPanel";
+import type { Coordinates } from "@/components/map/MarsViewer";
+import { defaultLayerState } from "@/lib/layers/catalog";
+import { loadJson } from "@/lib/data/loadJson";
+import type { LayerState, LayerStateMap } from "@/types/layer";
+import type { ScientificPOI } from "@/types/poi";
+
+// Cesium touches `window`, so the globe is client-only.
+const MarsViewer = dynamic(() => import("@/components/map/MarsViewer"), { ssr: false });
+
+export default function Page() {
+  const [layers, setLayers] = useState<LayerStateMap>(defaultLayerState);
+  const [pois, setPois] = useState<ScientificPOI[]>([]);
+  const [selectedPoiId, setSelectedPoiId] = useState<string | null>(null);
+  const [cursor, setCursor] = useState<Coordinates | null>(null);
+  const [homeSignal, setHomeSignal] = useState(0);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
+
+  useEffect(() => {
+    loadJson<ScientificPOI[]>("/data/jezero/pois.json").then(setPois).catch(console.error);
+    // Start collapsed on phones so the map is visible.
+    if (window.matchMedia("(max-width: 640px)").matches) setSidebarOpen(false);
+  }, []);
+
+  const updateLayer = useCallback((id: string, next: Partial<LayerState>) => {
+    setLayers((prev) => ({ ...prev, [id]: { ...prev[id], ...next } }));
+  }, []);
+
+  const selectedPoi = pois.find((p) => p.id === selectedPoiId) ?? null;
+
   return (
-    <div className="font-sans grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="font-mono list-inside list-decimal text-sm/6 text-center sm:text-left">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] font-mono font-semibold px-1 py-0.5 rounded">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+    <main className="relative h-dvh w-full overflow-hidden">
+      <MarsViewer
+        layers={layers}
+        pois={pois}
+        selectedPoiId={selectedPoiId}
+        onSelectPoi={setSelectedPoiId}
+        onCursorMove={setCursor}
+        homeSignal={homeSignal}
+      />
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+      {/* Top bar */}
+      <header className="pointer-events-none absolute inset-x-0 top-0 flex items-center gap-3 p-3">
+        <button
+          type="button"
+          onClick={() => setSidebarOpen((o) => !o)}
+          className="pointer-events-auto rounded-md border border-white/10 bg-panel p-2 text-white/80 backdrop-blur hover:text-white"
+          aria-label={sidebarOpen ? "Hide panel" : "Show panel"}
+        >
+          {sidebarOpen ? <PanelLeftClose size={18} /> : <PanelLeftOpen size={18} />}
+        </button>
+        <div className="pointer-events-auto rounded-md border border-white/10 bg-panel px-3 py-1.5 backdrop-blur">
+          <h1 className="text-sm font-semibold leading-tight tracking-wide">Marswalk</h1>
+          <p className="text-[11px] text-mars-200">Jezero Crater · Marswalk planner</p>
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
+        <button
+          type="button"
+          onClick={() => setHomeSignal((n) => n + 1)}
+          className="pointer-events-auto ml-auto rounded-md border border-white/10 bg-panel p-2 text-white/80 backdrop-blur hover:text-white"
+          aria-label="Reset view to Jezero Crater"
+          title="Reset view"
         >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
-    </div>
+          <Home size={18} />
+        </button>
+      </header>
+
+      {/* Left sidebar */}
+      {sidebarOpen && (
+        <div className="absolute bottom-10 left-3 top-20 flex w-[min(20rem,calc(100vw-1.5rem))] flex-col gap-4 rounded-lg border border-white/10 bg-panel p-3 shadow-2xl backdrop-blur">
+          <PoiList pois={pois} selectedId={selectedPoiId} onSelect={setSelectedPoiId} />
+          <LayerPanel state={layers} onChange={updateLayer} />
+        </div>
+      )}
+
+      {/* POI details */}
+      {selectedPoi && (
+        <div className="absolute bottom-10 right-3 top-20 flex w-[min(22rem,calc(100vw-1.5rem))] flex-col justify-start">
+          <PoiPanel poi={selectedPoi} onClose={() => setSelectedPoiId(null)} />
+        </div>
+      )}
+
+      {/* Cursor coordinates */}
+      <div className="pointer-events-none absolute bottom-3 left-1/2 flex -translate-x-1/2 items-center gap-1.5 rounded-md border border-white/10 bg-panel px-2.5 py-1 font-mono text-[11px] text-white/70 backdrop-blur">
+        <Crosshair size={12} />
+        {cursor
+          ? `${Math.abs(cursor.lat).toFixed(4)}°${cursor.lat >= 0 ? "N" : "S"}  ${cursor.lon.toFixed(4)}°E`
+          : "— move over the map —"}
+      </div>
+    </main>
   );
 }
