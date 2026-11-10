@@ -2,7 +2,8 @@
 export const JEZERO = {
   name: "Jezero Crater",
   /** Initial camera view: [west, south, east, north]. */
-  view: [77.15, 18.28, 77.72, 18.72] as [number, number, number, number],
+  // Whole crater (centre ≈ 18.38°N, 77.58°E, ~45–49 km wide) plus the delta.
+  view: [77.05, 17.95, 78.1, 18.82] as [number, number, number, number],
 };
 
 /** Mars mean radius (m), used for distance calculations. */

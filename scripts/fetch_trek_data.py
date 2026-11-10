@@ -117,7 +117,7 @@ def slug(s: str) -> str:
 # Category + short "why go there" for the astronaut planner. The long
 # description comes from NASA Mars Trek's bookmark page for each waypoint.
 POI_META = {
-    "Jezero Crater": ("crater", "Context: an impact crater that once held a lake fed by river channels."),
+    "Jezero Crater": ("region", "Exploration region: the whole crater, not a walking destination. Every Marswalk starts and ends inside it."),
     "Perseverance Landing Ellipse": ("landing", "Mission reference: the planned landing area for Mars 2020."),
     "Western Delta Deposit": ("sedimentary", "Top astrobiology target: layered, clay-rich lake delta sediments that could preserve biosignatures."),
     "Northern Delta Deposit": ("sedimentary", "Second delta fan, useful for comparing sediment sources entering the lake."),

@@ -1,0 +1,36 @@
+{
+  "source": "MRO CTX DTM, Jezero (USGS Astrogeology, Mars 2020 TRN), 20 m/px",
+  "sourceUrl": "https://astrogeology.usgs.gov/search/map/mars_2020_terrain_relative_navigation_context_camera_orthorectified_image_mosaic",
+  "width": 798,
+  "height": 756,
+  "cellSizeM": 40,
+  "bbox": {
+    "west": 77.16046545922367,
+    "south": 18.211027390963398,
+    "east": 77.69897516629472,
+    "north": 18.721194481872804
+  },
+  "nodataElevation": -32768,
+  "layout": [
+    {
+      "name": "elevation",
+      "type": "int16",
+      "units": "m (Mars 2000 areoid)",
+      "offset": 0
+    },
+    {
+      "name": "slope",
+      "type": "uint8",
+      "scale": 0.25,
+      "units": "deg (max of 20 m cells)",
+      "offset": 1206576
+    },
+    {
+      "name": "roughness",
+      "type": "uint8",
+      "scale": 0.05,
+      "units": "m RMS (max of 20 m cells)",
+      "offset": 1809864
+    }
+  ]
+}

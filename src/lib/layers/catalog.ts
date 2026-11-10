@@ -1,3 +1,4 @@
+import { RISK } from "@/lib/hazards/risk";
 import type { LayerDef, LayerStateMap } from "@/types/layer";
 
 const TREK = "https://trek.nasa.gov/tiles/Mars/EQ";
@@ -14,14 +15,28 @@ export const LAYERS: LayerDef[] = [
     id: "viking",
     kind: "imagery",
     name: "Viking color mosaic",
-    category: "optical",
-    description: "Global color basemap for regional context.",
+    category: "base",
+    description: "Global color base map. Covers the poles, where the THEMIS base map has no data.",
     resolution: "232 m/px",
     url: trek("Mars_Viking_MDIM21_ClrMosaic_global_232m", "jpg"),
     maximumLevel: 7,
     defaultVisible: true,
     defaultOpacity: 1,
     source: { mission: "Viking Orbiters", instrument: "VIS (MDIM 2.1)", url: "https://trek.nasa.gov/mars/" },
+  },
+  {
+    id: "themis-base",
+    kind: "imagery",
+    name: "THEMIS grayscale mosaic",
+    category: "base",
+    description:
+      "Sharp, seamless base map of the whole crater. Its gray tones blend with the CTX and HiRISE patch. (Same data as the daytime thermal layer, drawn underneath the photos.)",
+    resolution: "100 m/px",
+    url: trek("THEMIS_DayIR_ControlledMosaics_100m_v2_oct2018", "png"),
+    maximumLevel: 9,
+    defaultVisible: true,
+    defaultOpacity: 1,
+    source: { mission: "Mars Odyssey", instrument: "THEMIS IR (day)", url: "https://themis.asu.edu/" },
   },
   {
     id: "mola-hrsc",
@@ -91,6 +106,40 @@ export const LAYERS: LayerDef[] = [
     source: { mission: "Mars Reconnaissance Orbiter", instrument: "HiRISE", url: "https://www.uahirise.org/" },
   },
   {
+    id: "hazard",
+    kind: "hazard",
+    name: "Terrain hazard",
+    category: "safety",
+    description:
+      "Walking risk from slope and roughness, computed from the CTX elevation model. Low-risk ground is left clear. Rocks smaller than 20 m are not resolved.",
+    resolution: "40 m/px",
+    defaultVisible: false,
+    defaultOpacity: 0.75,
+    legend: RISK.labels.map((label, i) => ({
+      label:
+        i === 0
+          ? `${label} (<${RISK.slopeDeg[0]}°)`
+          : i === 3
+            ? `${label} (≥${RISK.slopeDeg[2]}°)`
+            : `${label} (${RISK.slopeDeg[i - 1]}–${RISK.slopeDeg[i]}°)`,
+      color: RISK.colors[i],
+    })),
+    source: { mission: "Mars Reconnaissance Orbiter", instrument: "CTX DTM 20 m (USGS)", url: "https://astrogeology.usgs.gov/search/map/mars_2020_terrain_relative_navigation_context_camera_orthorectified_image_mosaic" },
+  },
+  {
+    id: "hires-coverage",
+    kind: "vector",
+    name: "High-res coverage outline",
+    category: "optical",
+    description:
+      "Where the sharp CTX and HiRISE mosaics exist. They cover the delta and landing area (the western half of the crater), not the whole of Jezero.",
+    dataUrl: "/data/jezero/hires-coverage.geojson",
+    color: "#e5e7eb",
+    fillOpacity: 0,
+    defaultVisible: true,
+    source: { mission: "Mars Reconnaissance Orbiter", instrument: "CTX + HiRISE footprints", url: "https://astrogeology.usgs.gov/search/map/mars_2020_terrain_relative_navigation_context_camera_orthorectified_image_mosaic" },
+  },
+  {
     id: "crism",
     kind: "vector",
     name: "CRISM spectral observations",
@@ -129,7 +178,7 @@ export function defaultLayerState(): LayerStateMap {
   return Object.fromEntries(
     LAYERS.map((l) => [
       l.id,
-      { visible: l.defaultVisible, opacity: l.kind === "imagery" ? l.defaultOpacity : 1 },
+      { visible: l.defaultVisible, opacity: l.kind === "vector" ? 1 : l.defaultOpacity },
     ]),
   );
 }

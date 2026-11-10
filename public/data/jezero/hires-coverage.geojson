@@ -1,0 +1,4 @@
+{"type":"FeatureCollection","features":[
+{"type":"Feature","properties":{"name":"CTX 6 m coverage"},"geometry":{"type":"Polygon","coordinates":[[[77.160466,18.211027],[77.699178,18.211027],[77.699178,18.721195],[77.160466,18.721195],[77.160466,18.211027]]]}},
+{"type":"Feature","properties":{"name":"HiRISE 25 cm coverage"},"geometry":{"type":"Polygon","coordinates":[[[77.222933,18.306799],[77.583964,18.306799],[77.583964,18.669315],[77.222933,18.669315],[77.222933,18.306799]]]}}
+]}

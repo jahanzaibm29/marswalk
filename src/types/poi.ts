@@ -1,6 +1,6 @@
 export type PoiCategory =
   | "habitat"
-  | "crater"
+  | "region"
   | "landing"
   | "sedimentary"
   | "geomorphology"

@@ -5,14 +5,16 @@ import { LAYERS } from "@/lib/layers/catalog";
 import type { LayerCategory, LayerState, LayerStateMap } from "@/types/layer";
 
 const CATEGORY_LABEL: Record<LayerCategory, string> = {
-  optical: "Optical imagery",
+  safety: "Safety",
+  base: "Base maps",
+  optical: "High-resolution imagery",
   topography: "Topography",
   thermal: "Thermal",
   spectral: "Spectral / mineralogy",
   mission: "Mission data",
 };
 
-const CATEGORY_ORDER: LayerCategory[] = ["optical", "topography", "thermal", "spectral", "mission"];
+const CATEGORY_ORDER: LayerCategory[] = ["safety", "optical", "base", "topography", "thermal", "spectral", "mission"];
 
 interface Props {
   state: LayerStateMap;
@@ -53,7 +55,7 @@ export default function LayerPanel({ state, onChange }: Props) {
                         <div className="min-w-0 flex-1">
                           <div className="flex items-baseline justify-between gap-2">
                             <span className="text-sm font-medium leading-tight">{l.name}</span>
-                            {l.kind === "imagery" && (
+                            {l.kind !== "vector" && (
                               <span className="shrink-0 font-mono text-[10px] text-white/50">{l.resolution}</span>
                             )}
                           </div>
@@ -61,7 +63,17 @@ export default function LayerPanel({ state, onChange }: Props) {
                           <p className="mt-0.5 text-[10px] text-white/35">
                             {l.source.mission} · {l.source.instrument}
                           </p>
-                          {l.kind === "imagery" && st.visible && (
+                          {l.kind === "hazard" && (
+                            <ul className="mt-1 grid grid-cols-2 gap-x-2 gap-y-0.5">
+                              {l.legend.map((item) => (
+                                <li key={item.label} className="flex items-center gap-1.5 text-[10px] text-white/60">
+                                  <span className="h-2 w-2 shrink-0 rounded-sm" style={{ background: item.color }} />
+                                  {item.label}
+                                </li>
+                              ))}
+                            </ul>
+                          )}
+                          {l.kind !== "vector" && st.visible && (
                             <label className="mt-1 flex items-center gap-2 text-[10px] text-white/50">
                               Opacity
                               <input

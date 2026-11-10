@@ -1,4 +1,4 @@
-export type LayerCategory = "optical" | "topography" | "thermal" | "spectral" | "mission";
+export type LayerCategory = "safety" | "base" | "optical" | "topography" | "thermal" | "spectral" | "mission";
 
 export interface LayerSource {
   mission: string;
@@ -33,9 +33,19 @@ export interface VectorLayerDef extends BaseLayerDef {
   dataUrl: string;
   /** CSS hex color. */
   color: string;
+  /** Polygon fill opacity (default 0.15); 0 draws outlines only. */
+  fillOpacity?: number;
 }
 
-export type LayerDef = ImageryLayerDef | VectorLayerDef;
+/** Computed in the browser from the terrain grid (terrain risk classes). */
+export interface HazardLayerDef extends BaseLayerDef {
+  kind: "hazard";
+  resolution: string;
+  defaultOpacity: number;
+  legend: { label: string; color: string }[];
+}
+
+export type LayerDef = ImageryLayerDef | VectorLayerDef | HazardLayerDef;
 
 export interface LayerState {
   visible: boolean;

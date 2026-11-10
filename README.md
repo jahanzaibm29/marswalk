@@ -10,8 +10,9 @@ productive Marswalks in **Jezero Crater**.
 
 It integrates multiple NASA datasets into one interactive 3D globe: orbital imagery,
 topography, thermal infrared, spectral observation footprints, and the real Perseverance
-rover traverse. On top of these it adds geological points of interest, and (next
-milestones) terrain hazard analysis and an A\* route planner that recommends safer paths.
+rover traverse. On top of these it adds geological points of interest, a terrain hazard
+map, and an A\* route planner that compares the safest and most direct path, with travel
+time, elevation profile and an EVA time budget.
 
 ## Status
 
@@ -21,7 +22,8 @@ milestones) terrain hazard analysis and an A\* route planner that recommends saf
 | 2. Real NASA imagery over Jezero (CTX 6 m, HiRISE 25 cm) | ✅ |
 | 3. Scientific layers: elevation, thermal (day/night), CRISM footprints | ✅ (CRISM mineral map: todo) |
 | 4. Layer manager, opacity, coordinates, POIs + detail panel | ✅ |
-| 5. Hazard map (slope/roughness) + A\* Marswalk planner | ⏳ Next |
+| 5. Hazard map (slope/roughness) + A\* Marswalk planner, ETA, mission summary | ✅ |
+| 5b. Guide Mode: simulated walk along the route | ⏳ Next |
 | 6. Environment dashboard (REMS/MEDA historical) | ⏳ |
 | 7. Final integration, demo scenario, Cloudflare deploy | ⏳ |
 
@@ -36,6 +38,7 @@ milestones) terrain hazard analysis and an A\* route planner that recommends saf
 | Thermal | Mars Odyssey THEMIS day & night IR mosaics, 100 m/px | Mars Trek WMTS tiles |
 | Spectral | MRO CRISM MTRDR targeted observation footprints | Static GeoJSON (`public/data/jezero`) |
 | Mission | Perseverance traverse path, landing ellipse, waypoints | Static GeoJSON / JSON |
+| Terrain (routing) | MRO CTX DTM of Jezero, 20 m/px (USGS Mars 2020 TRN product) | `public/data/jezero/terrain.bin`, 40 m grid |
 
 Raster tiles are streamed directly from [NASA Mars Trek](https://trek.nasa.gov/mars/), which
 is CORS-enabled and uses a geographic 2×1 tiling scheme. That means **no tile hosting cost**.
@@ -57,7 +60,32 @@ Other scripts:
 npm run build        # static export to ./out (deploy this folder)
 npm run preview      # serve ./out locally
 npm run data         # re-download Jezero vector data + POIs from NASA Mars Trek
+npm run terrain      # rebuild terrain.bin from data/raw/JEZ_ctx_DTM_20m.tif
 ```
+
+### Terrain data
+
+The routing grid is already committed. To rebuild it, download the CTX DTM (9.7 MB) into
+`data/raw/` (git-ignored) and run `npm run terrain`:
+
+```bash
+curl -o data/raw/JEZ_ctx_DTM_20m.tif \
+  https://asc-pds-services.s3.us-west-2.amazonaws.com/mosaic/mars2020_trn/CTX/JEZ_ctx_B_soc_008_DTM_MOLAtopography_DeltaGeoid_20m_Eqc_latTs0_lon0.tif
+```
+
+## Safety and routing model
+
+* **Slope** (Horn method) and **roughness** (RMS deviation from a fitted plane over 60 m)
+  are computed at 20 m, then aggregated to a 40 m grid using the block *maximum*.
+* **Risk classes:** Low < 10°, Medium 10–18°, High 18–25°, No-go ≥ 25° (roughness bands
+  0.6 / 1.2 / 2.0 m). These are assumptions informed by Apollo EVA experience.
+* **A\***, 8-connected, cost = 3D distance × (1 + λ·risk). No-go cells are blocked.
+  *Safest* uses λ = 8, *Most direct* λ = 0.25. Paths are then straightened wherever a
+  straight line doesn't enter riskier ground. Runs in a Web Worker.
+* **Travel time:** Tobler's hiking function rescaled to 2.5 km/h on flat ground, slowed on
+  rough ground. Mission summary adds 1 h at the site and the return walk, checked against
+  an 8 h EVA limit. All times are **hypothetical** estimates.
+* Rocks smaller than the 20 m DTM are not detected; use HiRISE to inspect a route.
 
 ## Deploying to Cloudflare Pages ($0)
 
@@ -73,13 +101,19 @@ src/
   components/map/      MarsViewer: Cesium globe on the Mars ellipsoid
   components/layers/   science layer manager (toggle + opacity)
   components/poi/      POI list and detail panel
+  components/route/    route planner panel + elevation profile
   lib/layers/catalog.ts  layer definitions (sources, URLs, resolution)
+  lib/terrain/         terrain grid loader + cell helpers
+  lib/hazards/risk.ts  risk classes, scoring, hazard overlay image
+  lib/routing/         A* + path smoothing, route stats, walking-speed model
   lib/mars/region.ts     Jezero region constants
-  types/               LayerDef, ScientificPOI
+  workers/route.worker.ts  runs A* off the main thread
+  types/               LayerDef, ScientificPOI, RouteResult
 scripts/
   copy-cesium-assets.mjs  copies Cesium runtime into public/cesium
   fetch_trek_data.py      downloads + simplifies NASA vector data
-public/data/jezero/    pois.json, perseverance-path, landing-ellipse, crism-footprints
+  build_terrain.mjs       DTM → slope/roughness → terrain.bin
+public/data/jezero/    pois.json, terrain.bin/json, perseverance-path, landing-ellipse, crism-footprints
 ```
 
 ## Coordinate conventions
@@ -92,8 +126,9 @@ public/data/jezero/    pois.json, perseverance-path, landing-ellipse, crism-foot
 
 * Tailwind CSS is pinned to **v3**. Tailwind v4's native scanner binary is blocked by Windows
   Smart App Control on one dev machine, and its WASM fallback silently generates no utilities.
-* Travel-time estimates (upcoming route planner) will be hypothetical suited-astronaut
-  estimates, not validated human-performance data.
+* Travel-time estimates are hypothetical suited-astronaut estimates, not validated
+  human-performance data.
+* Stop `npm run dev` before running `npm run build`: both use the `.next` folder.
 
 ## Credits
 
