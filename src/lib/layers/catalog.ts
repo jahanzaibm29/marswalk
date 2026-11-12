@@ -5,8 +5,14 @@ const TREK = "https://trek.nasa.gov/tiles/Mars/EQ";
 const trek = (layer: string, ext: "jpg" | "png") =>
   `${TREK}/${layer}/1.0.0/default/default028mm/{z}/{y}/{x}.${ext}`;
 
+/** Approximation of the MOLA/HRSC color-shade elevation ramp. */
+const ELEVATION_RAMP = ["#1e3a8a", "#2563eb", "#06b6d4", "#22c55e", "#facc15", "#f97316", "#dc2626", "#f5f5f4"];
+const GRAY_RAMP = ["#0a0a0a", "#f5f5f5"];
+
 /**
- * Scientific layer catalog, drawn bottom-to-top in this order.
+ * Scientific layer catalog, drawn bottom-to-top in this order: base maps, then
+ * the CTX/HiRISE photos, then analysis overlays (elevation, thermal, hazard) so
+ * their opacity blends over the photos.
  * Raster tiles are streamed from NASA Mars Trek (CORS-enabled, geographic
  * 2x1 tiling scheme, Mars 2000 sphere) so no tile hosting is needed.
  */
@@ -39,45 +45,6 @@ export const LAYERS: LayerDef[] = [
     source: { mission: "Mars Odyssey", instrument: "THEMIS IR (day)", url: "https://themis.asu.edu/" },
   },
   {
-    id: "mola-hrsc",
-    kind: "imagery",
-    name: "Elevation (color hillshade)",
-    category: "topography",
-    description: "Color-coded terrain height: blue/green is low, yellow/red/white is high, with shading for slopes. Blend it over the photos to read the crater's relief.",
-    resolution: "200 m/px",
-    url: trek("Mars_MOLA_blend200ppx_HRSC_ClrShade_clon0dd_200mpp_lzw", "jpg"),
-    maximumLevel: 8,
-    defaultVisible: false,
-    defaultOpacity: 0.7,
-    source: { mission: "Mars Global Surveyor + Mars Express", instrument: "MOLA + HRSC DEM blend", url: "https://astrogeology.usgs.gov/search/map/mars_mgs_mola_mex_hrsc_blended_dem_global_200m" },
-  },
-  {
-    id: "themis-day",
-    kind: "imagery",
-    name: "Daytime thermal infrared",
-    category: "thermal",
-    description: "Surface brightness temperature by day. Highlights slope orientation and albedo differences.",
-    resolution: "100 m/px",
-    url: trek("THEMIS_DayIR_ControlledMosaics_100m_v2_oct2018", "png"),
-    maximumLevel: 9,
-    defaultVisible: false,
-    defaultOpacity: 0.8,
-    source: { mission: "Mars Odyssey", instrument: "THEMIS IR", url: "https://themis.asu.edu/" },
-  },
-  {
-    id: "themis-night",
-    kind: "imagery",
-    name: "Nighttime thermal infrared",
-    category: "thermal",
-    description: "Bright at night = rock and bedrock that holds heat (high thermal inertia); dark = loose dust and sand. A proxy for firm footing.",
-    resolution: "100 m/px",
-    url: trek("THEMIS_NightIR_ControlledMosaics_100m_v2_oct2018", "png"),
-    maximumLevel: 9,
-    defaultVisible: false,
-    defaultOpacity: 0.8,
-    source: { mission: "Mars Odyssey", instrument: "THEMIS IR", url: "https://themis.asu.edu/" },
-  },
-  {
     id: "ctx",
     kind: "imagery",
     name: "CTX mosaic",
@@ -106,6 +73,48 @@ export const LAYERS: LayerDef[] = [
     source: { mission: "Mars Reconnaissance Orbiter", instrument: "HiRISE", url: "https://www.uahirise.org/" },
   },
   {
+    id: "mola-hrsc",
+    kind: "imagery",
+    name: "Elevation (color hillshade)",
+    category: "topography",
+    description: "Color-coded terrain height: blue/green is low, yellow/red/white is high, with shading for slopes. Blend it over the photos to read the crater's relief.",
+    resolution: "200 m/px",
+    url: trek("Mars_MOLA_blend200ppx_HRSC_ClrShade_clon0dd_200mpp_lzw", "jpg"),
+    maximumLevel: 8,
+    defaultVisible: false,
+    defaultOpacity: 0.7,
+    legend: { type: "ramp", colors: ELEVATION_RAMP, low: "Low", high: "High" },
+    source: { mission: "Mars Global Surveyor + Mars Express", instrument: "MOLA + HRSC DEM blend", url: "https://astrogeology.usgs.gov/search/map/mars_mgs_mola_mex_hrsc_blended_dem_global_200m" },
+  },
+  {
+    id: "themis-day",
+    kind: "imagery",
+    name: "Daytime thermal infrared",
+    category: "thermal",
+    description: "Surface brightness temperature by day. Highlights slope orientation and albedo differences.",
+    resolution: "100 m/px",
+    url: trek("THEMIS_DayIR_ControlledMosaics_100m_v2_oct2018", "png"),
+    maximumLevel: 9,
+    defaultVisible: false,
+    defaultOpacity: 0.8,
+    legend: { type: "ramp", colors: GRAY_RAMP, low: "Cooler", high: "Warmer" },
+    source: { mission: "Mars Odyssey", instrument: "THEMIS IR", url: "https://themis.asu.edu/" },
+  },
+  {
+    id: "themis-night",
+    kind: "imagery",
+    name: "Nighttime thermal infrared",
+    category: "thermal",
+    description: "Bright at night = rock and bedrock that holds heat (high thermal inertia); dark = loose dust and sand. A proxy for firm footing.",
+    resolution: "100 m/px",
+    url: trek("THEMIS_NightIR_ControlledMosaics_100m_v2_oct2018", "png"),
+    maximumLevel: 9,
+    defaultVisible: false,
+    defaultOpacity: 0.8,
+    legend: { type: "ramp", colors: GRAY_RAMP, low: "Dust, sand", high: "Rock, bedrock" },
+    source: { mission: "Mars Odyssey", instrument: "THEMIS IR", url: "https://themis.asu.edu/" },
+  },
+  {
     id: "hazard",
     kind: "hazard",
     name: "Terrain hazard",
@@ -115,15 +124,18 @@ export const LAYERS: LayerDef[] = [
     resolution: "40 m/px",
     defaultVisible: false,
     defaultOpacity: 0.75,
-    legend: RISK.labels.map((label, i) => ({
-      label:
-        i === 0
-          ? `${label} (<${RISK.slopeDeg[0]}°)`
-          : i === 3
-            ? `${label} (≥${RISK.slopeDeg[2]}°)`
-            : `${label} (${RISK.slopeDeg[i - 1]}–${RISK.slopeDeg[i]}°)`,
-      color: RISK.colors[i],
-    })),
+    legend: {
+      type: "classes",
+      items: RISK.labels.map((label, i) => ({
+        label:
+          i === 0
+            ? `${label} (<${RISK.slopeDeg[0]}°)`
+            : i === 3
+              ? `${label} (≥${RISK.slopeDeg[2]}°)`
+              : `${label} (${RISK.slopeDeg[i - 1]}–${RISK.slopeDeg[i]}°)`,
+        color: RISK.colors[i],
+      })),
+    },
     source: { mission: "Mars Reconnaissance Orbiter", instrument: "CTX DTM 20 m (USGS)", url: "https://astrogeology.usgs.gov/search/map/mars_2020_terrain_relative_navigation_context_camera_orthorectified_image_mosaic" },
   },
   {
@@ -134,6 +146,7 @@ export const LAYERS: LayerDef[] = [
     description:
       "Where the sharp CTX and HiRISE mosaics exist. They cover the delta and landing area (the western half of the crater), not the whole of Jezero.",
     dataUrl: "/data/jezero/hires-coverage.geojson",
+    geometry: "area",
     color: "#e5e7eb",
     fillOpacity: 0,
     defaultVisible: true,
@@ -146,6 +159,7 @@ export const LAYERS: LayerDef[] = [
     category: "spectral",
     description: "Footprints of targeted CRISM hyperspectral scenes. Mineral maps (clays, carbonates) can be derived inside these areas.",
     dataUrl: "/data/jezero/crism-footprints.geojson",
+    geometry: "area",
     color: "#c084fc",
     defaultVisible: false,
     source: { mission: "Mars Reconnaissance Orbiter", instrument: "CRISM (MTRDR)", url: "https://pds-geosciences.wustl.edu/missions/mro/crism.htm" },
@@ -157,6 +171,7 @@ export const LAYERS: LayerDef[] = [
     category: "mission",
     description: "Perseverance's targeted landing area.",
     dataUrl: "/data/jezero/landing-ellipse.geojson",
+    geometry: "area",
     color: "#facc15",
     defaultVisible: false,
     source: { mission: "Mars 2020", instrument: "EDL planning", url: "https://mars.nasa.gov/mars2020/" },
@@ -168,6 +183,7 @@ export const LAYERS: LayerDef[] = [
     category: "mission",
     description: "The real path driven by the Perseverance rover, a proven traversable route.",
     dataUrl: "/data/jezero/perseverance-path.geojson",
+    geometry: "line",
     color: "#38bdf8",
     defaultVisible: true,
     source: { mission: "Mars 2020", instrument: "Rover localization", url: "https://mars.nasa.gov/mars2020/mission/where-is-the-rover/" },

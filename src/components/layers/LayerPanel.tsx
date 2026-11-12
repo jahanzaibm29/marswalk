@@ -2,7 +2,7 @@
 
 import { Eye, EyeOff, Layers } from "lucide-react";
 import { LAYERS } from "@/lib/layers/catalog";
-import type { LayerCategory, LayerState, LayerStateMap } from "@/types/layer";
+import type { LayerCategory, LayerLegend, LayerState, LayerStateMap, VectorLayerDef } from "@/types/layer";
 
 const CATEGORY_LABEL: Record<LayerCategory, string> = {
   safety: "Safety",
@@ -63,16 +63,8 @@ export default function LayerPanel({ state, onChange }: Props) {
                           <p className="mt-0.5 text-[10px] text-white/35">
                             {l.source.mission} · {l.source.instrument}
                           </p>
-                          {l.kind === "hazard" && (
-                            <ul className="mt-1 grid grid-cols-2 gap-x-2 gap-y-0.5">
-                              {l.legend.map((item) => (
-                                <li key={item.label} className="flex items-center gap-1.5 text-[10px] text-white/60">
-                                  <span className="h-2 w-2 shrink-0 rounded-sm" style={{ background: item.color }} />
-                                  {item.label}
-                                </li>
-                              ))}
-                            </ul>
-                          )}
+                          {l.legend && <LegendView legend={l.legend} />}
+                          {l.kind === "vector" && <VectorKey def={l} />}
                           {l.kind !== "vector" && st.visible && (
                             <label className="mt-1 flex items-center gap-2 text-[10px] text-white/50">
                               Opacity
@@ -99,5 +91,50 @@ export default function LayerPanel({ state, onChange }: Props) {
         })}
       </div>
     </section>
+  );
+}
+
+function LegendView({ legend }: { legend: LayerLegend }) {
+  if (legend.type === "classes") {
+    return (
+      <ul className="mt-1 grid grid-cols-2 gap-x-2 gap-y-0.5">
+        {legend.items.map((item) => (
+          <li key={item.label} className="flex items-center gap-1.5 text-[10px] text-white/60">
+            <span className="h-2 w-2 shrink-0 rounded-sm" style={{ background: item.color }} />
+            {item.label}
+          </li>
+        ))}
+      </ul>
+    );
+  }
+  return (
+    <div className="mt-1">
+      <div
+        className="h-2 rounded-sm border border-white/10"
+        style={{ background: `linear-gradient(to right, ${legend.colors.join(", ")})` }}
+      />
+      <div className="mt-0.5 flex justify-between text-[10px] text-white/60">
+        <span>{legend.low}</span>
+        <span>{legend.high}</span>
+      </div>
+    </div>
+  );
+}
+
+/** Map symbol for a GeoJSON overlay, drawn the way the globe draws it. */
+function VectorKey({ def }: { def: VectorLayerDef }) {
+  const fill = def.fillOpacity ?? 0.15;
+  const label = def.geometry === "line" ? "Path" : fill > 0 ? "Area" : "Boundary";
+  return (
+    <div className="mt-1 flex items-center gap-1.5 text-[10px] text-white/60">
+      <svg width="18" height="10" viewBox="0 0 18 10" className="shrink-0" aria-hidden>
+        {def.geometry === "line" ? (
+          <path d="M1 8 L6 3 L11 6 L17 2" fill="none" stroke={def.color} strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" />
+        ) : (
+          <rect x="1" y="1" width="16" height="8" rx="1.5" fill={def.color} fillOpacity={fill} stroke={def.color} strokeWidth="1.5" />
+        )}
+      </svg>
+      {label}
+    </div>
   );
 }

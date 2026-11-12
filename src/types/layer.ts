@@ -6,6 +6,13 @@ export interface LayerSource {
   url: string;
 }
 
+/** Visual key drawn under a layer in the layer panel. */
+export type LayerLegend =
+  /** Discrete classes, one color swatch each. */
+  | { type: "classes"; items: { label: string; color: string }[] }
+  /** Continuous color ramp, low value on the left. */
+  | { type: "ramp"; colors: string[]; low: string; high: string };
+
 interface BaseLayerDef {
   id: string;
   name: string;
@@ -13,6 +20,7 @@ interface BaseLayerDef {
   description: string;
   source: LayerSource;
   defaultVisible: boolean;
+  legend?: LayerLegend;
 }
 
 /** A raster tile layer streamed from a WMTS-style {z}/{y}/{x} endpoint. */
@@ -31,6 +39,8 @@ export interface ImageryLayerDef extends BaseLayerDef {
 export interface VectorLayerDef extends BaseLayerDef {
   kind: "vector";
   dataUrl: string;
+  /** Geometry drawn, used for the legend symbol. */
+  geometry: "line" | "area";
   /** CSS hex color. */
   color: string;
   /** Polygon fill opacity (default 0.15); 0 draws outlines only. */
@@ -42,7 +52,7 @@ export interface HazardLayerDef extends BaseLayerDef {
   kind: "hazard";
   resolution: string;
   defaultOpacity: number;
-  legend: { label: string; color: string }[];
+  legend: LayerLegend;
 }
 
 export type LayerDef = ImageryLayerDef | VectorLayerDef | HazardLayerDef;

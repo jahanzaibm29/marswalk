@@ -146,15 +146,8 @@ export default function MarsViewer(props: Props) {
       if (scene.sun) scene.sun.show = false;
       if (scene.moon) scene.moon.show = false;
 
-      // Imagery: optical basemaps at the bottom, analysis overlays (elevation,
-      // thermal) above them so their opacity blends over the photos.
-      const imageryDefs = LAYERS.filter((l): l is ImageryLayerDef => l.kind === "imagery");
-      const ordered = [
-        ...imageryDefs.filter((l) => l.category === "base"),
-        ...imageryDefs.filter((l) => l.category === "optical"),
-        ...imageryDefs.filter((l) => l.category !== "base" && l.category !== "optical"),
-      ];
-      for (const def of ordered) {
+      // Imagery, bottom-to-top in catalog order.
+      for (const def of LAYERS.filter((l): l is ImageryLayerDef => l.kind === "imagery")) {
         const provider = new C.UrlTemplateImageryProvider({
           url: def.url,
           tilingScheme: new C.GeographicTilingScheme({ ellipsoid: mars }),
