@@ -1,6 +1,6 @@
 "use client";
 
-import { AlertTriangle, CheckCircle2, Crosshair, Footprints, Loader2, Route, X } from "lucide-react";
+import { AlertTriangle, CheckCircle2, Crosshair, Footprints, Loader2, PlayCircle, Route, X } from "lucide-react";
 import ElevationProfile from "@/components/route/ElevationProfile";
 import type { PickMode } from "@/components/map/MarsViewer";
 import { RISK } from "@/lib/hazards/risk";
@@ -25,6 +25,7 @@ interface Props {
   routes: RouteResult[];
   selectedRouteId: string | null;
   onSelectRoute: (id: string) => void;
+  onStartGuide: () => void;
 }
 
 export default function RoutePanel(p: Props) {
@@ -84,6 +85,15 @@ export default function RoutePanel(p: Props) {
               onSelect={() => p.onSelectRoute(r.id)}
             />
           ))}
+          {selected && (
+            <button
+              type="button"
+              onClick={p.onStartGuide}
+              className="flex w-full items-center justify-center gap-2 rounded-md border border-mars-400/60 bg-mars-500/20 px-3 py-2 text-sm font-semibold text-white hover:bg-mars-500/35"
+            >
+              <PlayCircle size={16} /> Start guided walk · {selected.label}
+            </button>
+          )}
           {selected && <MissionSummary route={selected} />}
         </div>
       )}

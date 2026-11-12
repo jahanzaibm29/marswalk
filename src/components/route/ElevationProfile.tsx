@@ -9,7 +9,14 @@ const H = 96;
 const PAD = { l: 34, r: 6, t: 6, b: 16 };
 
 /** Elevation along the route, coloured by terrain risk. */
-export default function ElevationProfile({ profile }: { profile: ProfilePoint[] }) {
+export default function ElevationProfile({
+  profile,
+  cursor,
+}: {
+  profile: ProfilePoint[];
+  /** Current position (distance m, elevation m) to mark, e.g. in Guide Mode. */
+  cursor?: { d: number; z: number };
+}) {
   if (profile.length < 2) return null;
   const total = profile[profile.length - 1].d;
   const zs = profile.map((p) => p.z);
@@ -53,6 +60,19 @@ export default function ElevationProfile({ profile }: { profile: ProfilePoint[] 
           <text x={PAD.l} y={H - 4}>0</text>
           <text x={W - PAD.r} y={H - 4} textAnchor="end">{fmtDistance(total)}</text>
         </g>
+        {cursor && (
+          <g>
+            <line
+              x1={x(cursor.d)}
+              y1={PAD.t}
+              x2={x(cursor.d)}
+              y2={H - PAD.b}
+              stroke="rgb(255 255 255 / 0.5)"
+              strokeDasharray="2 2"
+            />
+            <circle cx={x(cursor.d)} cy={y(Math.max(zMin, Math.min(zMax, cursor.z)))} r={3.5} fill="#fff" stroke="#e07a4a" strokeWidth={2} />
+          </g>
+        )}
         <line x1={PAD.l} y1={PAD.t} x2={PAD.l} y2={H - PAD.b} stroke="rgb(255 255 255 / 0.2)" />
         <line x1={PAD.l} y1={H - PAD.b} x2={W - PAD.r} y2={H - PAD.b} stroke="rgb(255 255 255 / 0.2)" />
       </svg>

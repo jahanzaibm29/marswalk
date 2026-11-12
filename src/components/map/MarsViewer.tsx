@@ -26,6 +26,16 @@ export interface Coordinates {
 
 export type PickMode = "start" | "end" | null;
 
+/** Simulated astronaut for Guide Mode. */
+export interface GuideMarker {
+  lonLat: LonLat;
+  headingDeg: number;
+  /** Route walked so far (on the way out). */
+  trail: LonLat[];
+  /** Last safe point to turn around, when the EVA would overrun. */
+  turnBack: LonLat | null;
+}
+
 interface Props {
   layers: LayerStateMap;
   pois: ScientificPOI[];
@@ -44,6 +54,9 @@ interface Props {
   onMapPick: (p: LonLat) => void;
   /** Fly to a rectangle; change `key` to trigger. */
   flyTo: { rect: Rect; key: number } | null;
+  guide: GuideMarker | null;
+  /** Keep the camera locked on the guide marker. */
+  guideFollow: boolean;
 }
 
 interface GeoJson {
@@ -66,7 +79,7 @@ const POI_COLORS: Record<string, string> = {
 export default function MarsViewer(props: Props) {
   const {
     layers, pois, selectedPoiId, homeSignal, hazard, routes, selectedRouteId,
-    routeStart, routeEnd, pickMode, flyTo,
+    routeStart, routeEnd, pickMode, flyTo, guide, guideFollow,
   } = props;
   const containerRef = useRef<HTMLDivElement>(null);
   const cesiumRef = useRef<Cesium | null>(null);
@@ -79,6 +92,9 @@ export default function MarsViewer(props: Props) {
   callbacksRef.current = { onSelectPoi: props.onSelectPoi, onCursorMove: props.onCursorMove, onMapPick: props.onMapPick };
   const pickModeRef = useRef<PickMode>(pickMode);
   pickModeRef.current = pickMode;
+  const guideRef = useRef<GuideMarker | null>(guide);
+  guideRef.current = guide;
+  const followingRef = useRef(false);
   const [ready, setReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -353,6 +369,126 @@ export default function MarsViewer(props: Props) {
     viewerRef.current?.scene.requestRender();
   }, [routes, selectedRouteId, routeStart, routeEnd, ready]);
 
+  // --- Guide Mode: astronaut marker and walked trail ----------------------
+  const guideActive = guide !== null;
+  const turnBack = guide?.turnBack ?? null;
+  useEffect(() => {
+    const C = cesiumRef.current;
+    const viewer = viewerRef.current;
+    if (!ready || !C || !viewer || !guideActive) return;
+    const mars = C.Ellipsoid.MARS;
+    const ds = new C.CustomDataSource("guide");
+    void viewer.dataSources.add(ds);
+
+    // Cache Cartesian conversions per marker update, not per frame.
+    let cacheFor: GuideMarker | null = null;
+    let cachePos = C.Cartesian3.ZERO;
+    let cacheTrail: CesiumNS.Cartesian3[] = [];
+    const current = () => {
+      const g = guideRef.current;
+      if (g && g !== cacheFor) {
+        cacheFor = g;
+        cachePos = C.Cartesian3.fromDegrees(g.lonLat[0], g.lonLat[1], 3, mars);
+        cacheTrail = C.Cartesian3.fromDegreesArrayHeights(
+          [...g.trail, g.lonLat].flatMap(([lon, lat]) => [lon, lat, 3]),
+          mars,
+        );
+      }
+      return g;
+    };
+
+    ds.entities.add({
+      polyline: {
+        positions: new C.CallbackProperty(() => (current(), cacheTrail), false),
+        width: 5,
+        material: new C.PolylineGlowMaterialProperty({
+          color: C.Color.fromCssColorString("#fbbf24"),
+          glowPower: 0.25,
+        }),
+      },
+    });
+    if (turnBack) {
+      ds.entities.add({
+        position: C.Cartesian3.fromDegrees(turnBack[0], turnBack[1], 0, mars),
+        point: {
+          pixelSize: 12,
+          color: C.Color.fromCssColorString("#dc2626"),
+          outlineColor: C.Color.WHITE,
+          outlineWidth: 2,
+          disableDepthTestDistance: Number.POSITIVE_INFINITY,
+        },
+        label: {
+          text: "TURN-BACK POINT",
+          font: "600 11px sans-serif",
+          fillColor: C.Color.fromCssColorString("#fca5a5"),
+          outlineColor: C.Color.BLACK,
+          outlineWidth: 3,
+          style: C.LabelStyle.FILL_AND_OUTLINE,
+          pixelOffset: new C.Cartesian2(0, -14),
+          verticalOrigin: C.VerticalOrigin.BOTTOM,
+          disableDepthTestDistance: Number.POSITIVE_INFINITY,
+        },
+      });
+    }
+    ds.entities.add({
+      position: new C.CallbackPositionProperty(() => (current(), cachePos), false, C.ReferenceFrame.FIXED),
+      billboard: {
+        image: astronautIcon(),
+        width: 40,
+        height: 40,
+        // Rotate relative to north (world Z) rather than the screen.
+        alignedAxis: C.Cartesian3.UNIT_Z,
+        rotation: new C.CallbackProperty(() => -C.Math.toRadians(current()?.headingDeg ?? 0), false),
+        disableDepthTestDistance: Number.POSITIVE_INFINITY,
+      },
+      label: {
+        text: "EVA-1",
+        font: "600 11px sans-serif",
+        fillColor: C.Color.WHITE,
+        outlineColor: C.Color.BLACK,
+        outlineWidth: 3,
+        style: C.LabelStyle.FILL_AND_OUTLINE,
+        pixelOffset: new C.Cartesian2(0, 24),
+        verticalOrigin: C.VerticalOrigin.TOP,
+        disableDepthTestDistance: Number.POSITIVE_INFINITY,
+      },
+    });
+    viewer.scene.requestRender();
+    return () => {
+      if (!viewer.isDestroyed()) {
+        viewer.dataSources.remove(ds, true);
+        viewer.scene.requestRender();
+      }
+    };
+  }, [guideActive, turnBack, ready]);
+
+  // --- Guide Mode: redraw on each step, and follow camera ------------------
+  useEffect(() => {
+    const C = cesiumRef.current;
+    const viewer = viewerRef.current;
+    if (!ready || !C || !viewer || viewer.isDestroyed()) return;
+    const cam = viewer.camera;
+    if (guide && guideFollow) {
+      const target = C.Cartesian3.fromDegrees(guide.lonLat[0], guide.lonLat[1], 0, C.Ellipsoid.MARS);
+      if (followingRef.current) {
+        // Keep whatever offset the user has orbited/zoomed to (camera.position
+        // is in the target's local frame while locked on).
+        cam.lookAt(target, C.Cartesian3.clone(cam.position));
+      } else {
+        cam.cancelFlight();
+        cam.lookAt(
+          target,
+          new C.HeadingPitchRange(C.Math.toRadians(guide.headingDeg), C.Math.toRadians(-35), 2500),
+        );
+        followingRef.current = true;
+      }
+    } else if (followingRef.current) {
+      cam.lookAtTransform(C.Matrix4.IDENTITY);
+      followingRef.current = false;
+    }
+    viewer.scene.requestRender();
+  }, [guide, guideFollow, ready]);
+
   // --- Fly to the selected POI --------------------------------------------
   useEffect(() => {
     const C = cesiumRef.current;
@@ -401,6 +537,44 @@ export default function MarsViewer(props: Props) {
       )}
     </div>
   );
+}
+
+let iconCache: HTMLCanvasElement | null = null;
+
+/** Astronaut marker: a disc with a heading arrow pointing up (north at rotation 0). */
+function astronautIcon(): HTMLCanvasElement {
+  if (iconCache) return iconCache;
+  const size = 80;
+  const c = document.createElement("canvas");
+  c.width = c.height = size;
+  const ctx = c.getContext("2d")!;
+  const m = size / 2;
+  // Heading arrow
+  ctx.beginPath();
+  ctx.moveTo(m, 2);
+  ctx.lineTo(m + 14, 24);
+  ctx.lineTo(m - 14, 24);
+  ctx.closePath();
+  ctx.fillStyle = "#fbbf24";
+  ctx.strokeStyle = "#000";
+  ctx.lineWidth = 3;
+  ctx.stroke();
+  ctx.fill();
+  // Body
+  ctx.beginPath();
+  ctx.arc(m, m + 4, 18, 0, Math.PI * 2);
+  ctx.fillStyle = "#ffffff";
+  ctx.fill();
+  ctx.lineWidth = 6;
+  ctx.strokeStyle = "#e07a4a";
+  ctx.stroke();
+  // Visor
+  ctx.beginPath();
+  ctx.ellipse(m, m + 1, 9, 6, 0, 0, Math.PI * 2);
+  ctx.fillStyle = "#1e293b";
+  ctx.fill();
+  iconCache = c;
+  return c;
 }
 
 function addGeoJson(

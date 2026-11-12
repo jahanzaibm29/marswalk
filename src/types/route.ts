@@ -11,6 +11,31 @@ export interface ProfilePoint {
   cls: number;
 }
 
+/** One step of the route at grid resolution, used by Guide Mode. */
+export interface TrackPoint {
+  lon: number;
+  lat: number;
+  /** Distance from start along the route, m. */
+  d: number;
+  /** Walking time from the start to here, hours. */
+  t: number;
+  /** Walking time from here back to the start along the same path, hours. */
+  tb: number;
+  /** Elevation, m. */
+  z: number;
+  /** Risk class 0–3. */
+  cls: number;
+  /** Local slope, degrees. */
+  slope: number;
+}
+
+/** A continuous stretch of high-risk ground along the route. */
+export interface HazardSection {
+  d0: number;
+  d1: number;
+  maxSlopeDeg: number;
+}
+
 export interface RouteResult {
   id: RouteStrategy;
   label: string;
@@ -26,6 +51,8 @@ export interface RouteResult {
   /** Distance travelled in each risk class [low, medium, high, no-go]. */
   riskDistanceM: [number, number, number, number];
   profile: ProfilePoint[];
+  track: TrackPoint[];
+  hazards: HazardSection[];
 }
 
 export interface RoutePoint {

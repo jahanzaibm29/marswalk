@@ -7,7 +7,11 @@ import LayerPanel from "@/components/layers/LayerPanel";
 import PoiList from "@/components/poi/PoiList";
 import PoiPanel from "@/components/poi/PoiPanel";
 import RoutePanel, { type PlanStatus } from "@/components/route/RoutePanel";
-import type { Coordinates, PickMode } from "@/components/map/MarsViewer";
+import GuidePanel from "@/components/guide/GuidePanel";
+import GuideBanner from "@/components/guide/GuideBanner";
+import type { Coordinates, GuideMarker, PickMode } from "@/components/map/MarsViewer";
+import { buildGuidePlan, guideStateAt } from "@/lib/guide/guide";
+import { useGuideSim } from "@/lib/guide/useGuideSim";
 import { defaultLayerState } from "@/lib/layers/catalog";
 import { loadJson } from "@/lib/data/loadJson";
 import { computeRisk, renderHazardImage, RISK, type RiskGrid } from "@/lib/hazards/risk";
@@ -46,6 +50,10 @@ export default function Page() {
   const [status, setStatus] = useState<PlanStatus>({ state: "idle" });
   const [flyTo, setFlyTo] = useState<{ rect: Rect; key: number } | null>(null);
   const workerRef = useRef<Worker | null>(null);
+
+  // Guide Mode (simulated walk along the selected route)
+  const [guideRouteId, setGuideRouteId] = useState<string | null>(null);
+  const [guideFollow, setGuideFollow] = useState(true);
   const requestIdRef = useRef(0);
 
   useEffect(() => {
@@ -103,7 +111,43 @@ export default function Page() {
     [pois, terrain],
   );
 
+  const guideRoute = routes.find((r) => r.id === guideRouteId) ?? null;
+  const guidePlan = useMemo(
+    () => (guideRoute && start && end ? buildGuidePlan(guideRoute, start.label, end.label, pois) : null),
+    [guideRoute, start, end, pois],
+  );
+  const sim = useGuideSim(guidePlan?.totalH ?? null);
+  const guideState = useMemo(() => (guidePlan ? guideStateAt(guidePlan, sim.simH) : null), [guidePlan, sim.simH]);
+  const guideMarker = useMemo<GuideMarker | null>(
+    () =>
+      guidePlan && guideState
+        ? {
+            lonLat: guideState.lonLat,
+            headingDeg: guideState.headingDeg,
+            trail: guidePlan.route.track.slice(0, guideState.trailIndex + 1).map((p) => [p.lon, p.lat]),
+            turnBack: guidePlan.turnBack?.lonLat ?? null,
+          }
+        : null,
+    [guidePlan, guideState],
+  );
+
+  const startGuide = () => {
+    if (!selectedRouteId) return;
+    setGuideRouteId(selectedRouteId);
+    setPickMode(null);
+    setSelectedPoiId(null);
+    setGuideFollow(true);
+    sim.reset();
+    sim.setPlaying(true);
+  };
+
+  const exitGuide = () => {
+    setGuideRouteId(null);
+    sim.reset();
+  };
+
   const resetRoutes = () => {
+    exitGuide();
     setRoutes([]);
     setSelectedRouteId(null);
     setStatus({ state: "idle" });
@@ -168,6 +212,8 @@ export default function Page() {
         pickMode={pickMode}
         onMapPick={onMapPick}
         flyTo={flyTo}
+        guide={guideMarker}
+        guideFollow={guideFollow}
       />
 
       {/* Top bar */}
@@ -220,7 +266,23 @@ export default function Page() {
               </button>
             ))}
           </nav>
-          {tab === "plan" && (
+          {tab === "plan" && guidePlan && guideState && (
+            <GuidePanel
+              plan={guidePlan}
+              state={guideState}
+              simH={sim.simH}
+              playing={sim.playing}
+              speed={sim.speed}
+              follow={guideFollow}
+              onTogglePlay={sim.togglePlay}
+              onSeek={sim.seek}
+              onReset={sim.reset}
+              onSpeed={sim.setSpeed}
+              onFollow={setGuideFollow}
+              onExit={exitGuide}
+            />
+          )}
+          {tab === "plan" && !guidePlan && (
             <RoutePanel
               routablePois={routablePois}
               start={start}
@@ -235,6 +297,7 @@ export default function Page() {
               routes={routes}
               selectedRouteId={selectedRouteId}
               onSelectRoute={setSelectedRouteId}
+              onStartGuide={startGuide}
             />
           )}
           {tab === "layers" && <LayerPanel state={layers} onChange={updateLayer} />}
@@ -262,6 +325,18 @@ export default function Page() {
                   }
                 : undefined
             }
+          />
+        </div>
+      )}
+
+      {/* Guide Mode cue banner */}
+      {guideState && (
+        <div className="pointer-events-none absolute bottom-12 left-1/2 flex -translate-x-1/2 justify-center">
+          <GuideBanner
+            cue={guideState.lastCue}
+            simH={sim.simH}
+            playing={sim.playing}
+            onTogglePlay={sim.togglePlay}
           />
         </div>
       )}
