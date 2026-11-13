@@ -1,0 +1,11 @@
+{
+  // Static Next.js export (`next build` -> ./out) served as Workers static assets.
+  // No server code: do NOT use the OpenNext adapter.
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "marswalk",
+  "compatibility_date": "2026-11-01",
+  "assets": {
+    "directory": "./out",
+    "not_found_handling": "404-page"
+  }
+}
