@@ -38,16 +38,16 @@ REMS/MEDA historical weather, and more landing sites with a DTM.
 
 ## NASA data used
 
-| Type | Mission / instrument | How it's served |
+| Type | Mission / instrument | Source / service |
 | --- | --- | --- |
-| Optical (context) | Viking Orbiters, MDIM 2.1 color mosaic, 232 m/px | Mars Trek WMTS tiles |
-| Optical | MRO CTX controlled Jezero orthomosaic, 6 m/px | Mars Trek WMTS tiles |
-| Optical | MRO HiRISE controlled Jezero orthomosaic, 25 cm/px | Mars Trek WMTS tiles |
-| Topography | MGS MOLA + Mars Express HRSC blended DEM, color hillshade, 200 m/px | Mars Trek WMTS tiles |
-| Thermal | Mars Odyssey THEMIS day & night IR mosaics, 100 m/px | Mars Trek WMTS tiles |
-| Spectral | MRO CRISM MTRDR targeted observation footprints | Static GeoJSON (`public/data/jezero`) |
-| Mission | Perseverance traverse path, landing ellipse, waypoints | Static GeoJSON / JSON |
-| Terrain (routing) | MRO CTX DTM of Jezero, 20 m/px (USGS Mars 2020 TRN product) | `public/data/jezero/terrain.bin`, 40 m grid |
+| Optical (context) | [Viking Orbiters](https://trek.nasa.gov/mars/), MDIM 2.1 color mosaic, 232 m/px | [Mars Trek WMTS](https://trek.nasa.gov/tiles/Mars/EQ/Mars_Viking_MDIM21_ClrMosaic_global_232m/1.0.0/WMTSCapabilities.xml) |
+| Optical | [MRO CTX](https://www.msss.com/all_projects/mro-ctx.php) controlled Jezero orthomosaic, 6 m/px | [Mars Trek WMTS](https://trek.nasa.gov/tiles/Mars/EQ/JEZ_ctx_B_soc_008_orthoMosaic_6m_Eqc_latTs0_lon0/1.0.0/WMTSCapabilities.xml) |
+| Optical | [MRO HiRISE](https://www.uahirise.org/) controlled Jezero orthomosaic, 25 cm/px | [Mars Trek WMTS](https://trek.nasa.gov/tiles/Mars/EQ/JEZ_hirise_soc_006_orthoMosaic_25cm_Eqc_latTs0_lon0_first_dd/1.0.0/WMTSCapabilities.xml) |
+| Topography | [MGS MOLA + Mars Express HRSC blended DEM](https://astrogeology.usgs.gov/search/map/mars_mgs_mola_mex_hrsc_blended_dem_global_200m), color hillshade, 200 m/px | [Mars Trek WMTS](https://trek.nasa.gov/tiles/Mars/EQ/Mars_MOLA_blend200ppx_HRSC_ClrShade_clon0dd_200mpp_lzw/1.0.0/WMTSCapabilities.xml) |
+| Thermal | [Mars Odyssey THEMIS](https://themis.asu.edu/) day & night IR mosaics, 100 m/px | [Day WMTS](https://trek.nasa.gov/tiles/Mars/EQ/THEMIS_DayIR_ControlledMosaics_100m_v2_oct2018/1.0.0/WMTSCapabilities.xml) · [Night WMTS](https://trek.nasa.gov/tiles/Mars/EQ/THEMIS_NightIR_ControlledMosaics_100m_v2_oct2018/1.0.0/WMTSCapabilities.xml) |
+| Spectral | [MRO CRISM](https://pds-geosciences.wustl.edu/missions/mro/crism.htm) MTRDR targeted observation footprints | [Mars Trek service](https://trek.nasa.gov/mars/trekarcgis/rest/services/mars_mro_crism_mtrdr_c0a_humex_frt_sites/MapServer) → static GeoJSON (`public/data/jezero`) |
+| Mission | [Mars 2020 Perseverance](https://mars.nasa.gov/mars2020/mission/where-is-the-rover/) traverse path, landing ellipse, waypoints | [Traverse](https://trek.nasa.gov/mars/trekarcgis/rest/services/Perseverance_Traverse_Path/MapServer) · [Ellipse](https://trek.nasa.gov/mars/trekarcgis/rest/services/perseverance_landing_ellipse/MapServer) · [Waypoints](https://trek.nasa.gov/mars/trekarcgis/rest/services/mars2020_waypoints/MapServer) → static GeoJSON / JSON |
+| Terrain (routing) | [MRO CTX DTM of Jezero](https://astrogeology.usgs.gov/search/map/mars_2020_terrain_relative_navigation_context_camera_orthorectified_image_mosaic), 20 m/px (USGS Mars 2020 TRN product) | [GeoTIFF](https://asc-pds-services.s3.us-west-2.amazonaws.com/mosaic/mars2020_trn/CTX/JEZ_ctx_B_soc_008_DTM_MOLAtopography_DeltaGeoid_20m_Eqc_latTs0_lon0.tif) → `public/data/jezero/terrain.bin`, 40 m grid |
 
 Raster tiles are streamed directly from [NASA Mars Trek](https://trek.nasa.gov/mars/), which
 is CORS-enabled and uses a geographic 2×1 tiling scheme. That means **no tile hosting cost**.
