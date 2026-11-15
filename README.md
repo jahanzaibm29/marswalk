@@ -12,20 +12,29 @@ It integrates multiple NASA datasets into one interactive 3D globe: orbital imag
 topography, thermal infrared, spectral observation footprints, and the real Perseverance
 rover traverse. On top of these it adds geological points of interest, a terrain hazard
 map, and an A\* route planner that compares the safest and most direct path, with travel
-time, elevation profile and an EVA time budget.
+time, elevation profile and an EVA time budget. A Guide Mode then replays the planned
+walk step by step with navigation and hazard cues.
+
+## Links
+
+* **Live app:** <https://marswalk.pages.dev/>
+* **Source code:** <https://github.com/jahanzaibm29/marswalk>
+* **Demo video:** coming soon
 
 ## Status
 
 | Milestone | Status |
 | --- | --- |
-| 1. Infrastructure: Next.js static export, CesiumJS Mars globe | ✅ Working locally |
+| 1. Infrastructure: Next.js static export, CesiumJS Mars globe | ✅ |
 | 2. Real NASA imagery over Jezero (CTX 6 m, HiRISE 25 cm) | ✅ |
-| 3. Scientific layers: elevation, thermal (day/night), CRISM footprints | ✅ (CRISM mineral map: todo) |
-| 4. Layer manager, opacity, coordinates, POIs + detail panel | ✅ |
+| 3. Scientific layers: elevation, thermal (day/night), CRISM footprints | ✅ |
+| 4. Layer manager, opacity, legends, coordinates, POIs + detail panel | ✅ |
 | 5. Hazard map (slope/roughness) + A\* Marswalk planner, ETA, mission summary | ✅ |
-| 5b. Guide Mode: simulated walk along the route | ⏳ Next |
-| 6. Environment dashboard (REMS/MEDA historical) | ⏳ |
-| 7. Final integration, demo scenario, Cloudflare deploy | ⏳ |
+| 6. Guide Mode: simulated EVA (walk out, science at site, walk back) with cues | ✅ |
+| 7. Deployed as a static site on Cloudflare Pages ([marswalk.pages.dev](https://marswalk.pages.dev/)) | ✅ |
+
+**Future work:** CRISM mineral maps (not just footprints), an environment dashboard from
+REMS/MEDA historical weather, and more landing sites with a DTM.
 
 ## NASA data used
 
@@ -87,11 +96,25 @@ curl -o data/raw/JEZ_ctx_DTM_20m.tif \
   an 8 h EVA limit. All times are **hypothetical** estimates.
 * Rocks smaller than the 20 m DTM are not detected; use HiRISE to inspect a route.
 
-## Deploying to Cloudflare Pages ($0)
+## Guide Mode
 
-* Build command: `npm run build`
-* Output directory: `out`
-* Environment variable: `NODE_VERSION=22`
+Replays a planned route as a full simulated EVA on one mission clock: walking out, time at
+the science site, and the walk back. It shows phase, position, heading, elapsed and remaining
+time, modelled walking speed, warnings ~150 m before high-risk ground, landmarks near the
+route, and the last turn-back point that still gets the crew home inside the 8 h EVA limit.
+
+## Deploying to Cloudflare ($0)
+
+The app is a fully static export with no server code, live at <https://marswalk.pages.dev/>.
+
+* **Cloudflare Pages:** build command `npm run build`, output directory `out`,
+  environment variable `NODE_VERSION=22`.
+* **Workers static assets** (alternative): `wrangler.jsonc` serves `./out` directly, with no
+  OpenNext adapter: `npm run build && npx wrangler deploy`.
+
+`next.config.ts` aliases `@spz-loader/core` to a stub (`src/lib/stubs/spz-loader.ts`): its
+embedded WASM gets minified into invalid JS and breaks the Cesium chunk in production. The
+app doesn't use Gaussian splats, so nothing is lost.
 
 ## Project structure
 
@@ -102,10 +125,13 @@ src/
   components/layers/   science layer manager (toggle + opacity)
   components/poi/      POI list and detail panel
   components/route/    route planner panel + elevation profile
+  components/guide/    Guide Mode panel + cue banner
   lib/layers/catalog.ts  layer definitions (sources, URLs, resolution)
   lib/terrain/         terrain grid loader + cell helpers
   lib/hazards/risk.ts  risk classes, scoring, hazard overlay image
   lib/routing/         A* + path smoothing, route stats, walking-speed model
+  lib/guide/           Guide Mode simulation (phases, cues, turn-back point)
+  lib/stubs/           build-time stub for Cesium's SPZ loader
   lib/mars/region.ts     Jezero region constants
   workers/route.worker.ts  runs A* off the main thread
   types/               LayerDef, ScientificPOI, RouteResult
@@ -114,6 +140,7 @@ scripts/
   fetch_trek_data.py      downloads + simplifies NASA vector data
   build_terrain.mjs       DTM → slope/roughness → terrain.bin
 public/data/jezero/    pois.json, terrain.bin/json, perseverance-path, landing-ellipse, crism-footprints
+wrangler.jsonc         Cloudflare Workers static-assets config
 ```
 
 ## Coordinate conventions
@@ -130,8 +157,20 @@ public/data/jezero/    pois.json, terrain.bin/json, perseverance-path, landing-e
   human-performance data.
 * Stop `npm run dev` before running `npm run build`: both use the `.next` folder.
 
+## Use of AI
+
+We used an AI coding assistant (Claude Code by Anthropic) to help write, refactor and debug
+parts of the code and documentation. The challenge approach, choice of site and datasets,
+safety model and design decisions are our own, and we reviewed and tested all AI-assisted
+code. No AI-generated images, video or audio are used; all imagery is NASA data.
+
 ## Credits
 
 Imagery and data: NASA/JPL-Caltech, University of Arizona (HiRISE), MSSS (CTX),
 ASU (THEMIS), JHU-APL (CRISM), USGS Astrogeology, ESA/DLR/FU Berlin (HRSC),
-served by NASA Mars Trek. Globe rendering: CesiumJS.
+served by NASA Mars Trek. Partner data: ESA Mars Express HRSC, blended into the
+MOLA/HRSC elevation model.
+
+Software: CesiumJS, Next.js, React, TypeScript, Tailwind CSS, lucide-react, geotiff.js,
+Cloudflare Workers. Methods: Horn (1981) slope; Tobler's hiking function; A\* search;
+Apollo EVA experience for slope thresholds.
