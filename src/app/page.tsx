@@ -36,6 +36,7 @@ export default function Page() {
   const [homeSignal, setHomeSignal] = useState(0);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [tab, setTab] = useState<Tab>("plan");
+  const [developersOpen, setDevelopersOpen] = useState(false);
 
   // Terrain + hazards
   const [terrain, setTerrain] = useState<{ t: Terrain; risk: RiskGrid } | null>(null);
@@ -356,6 +357,109 @@ export default function Page() {
           </>
         )}
       </div>
+
+      {/* Developers button */}
+      <button
+        type="button"
+        onClick={() => setDevelopersOpen(true)}
+        className="absolute bottom-3 right-3 rounded-md border border-white/10 bg-panel px-3 py-1.5 text-xs font-semibold text-white/80 backdrop-blur transition hover:border-mars-500 hover:text-white"
+      >
+        Developers
+      </button>
+
+      {/* Developers popup */}
+      {developersOpen && (
+        <div
+          className="absolute inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm"
+          onClick={() => setDevelopersOpen(false)}
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="developers-title"
+            className="w-full max-w-md rounded-xl border border-white/10 bg-panel p-5 shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="mb-5 flex items-center justify-between">
+              <h2
+                id="developers-title"
+                className="text-lg font-semibold text-white"
+              >
+                Developers
+              </h2>
+
+              <button
+                type="button"
+                onClick={() => setDevelopersOpen(false)}
+                className="rounded-md p-1 text-white/50 transition hover:bg-white/10 hover:text-white"
+                aria-label="Close developers popup"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              {/* Ahmed Faraz */}
+              <div className="rounded-lg border border-white/10 bg-black/20 p-4">
+                <h3 className="mb-3 text-sm font-semibold text-white">
+                  Ahmed Faraz
+                </h3>
+
+                <div className="flex gap-3">
+                  <a
+                    href="https://www.linkedin.com/in/aahmedfaraz/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-xs text-mars-200 transition hover:text-white hover:underline"
+                  >
+                    LinkedIn ↗
+                  </a>
+
+                  <a
+                    href="https://github.com/aahmedfaraz/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-xs text-mars-200 transition hover:text-white hover:underline"
+                  >
+                    GitHub ↗
+                  </a>
+                </div>
+              </div>
+
+              {/* Muhammad Jahanzaib */}
+              <div className="rounded-lg border border-white/10 bg-black/20 p-4">
+                <h3 className="mb-3 text-sm font-semibold text-white">
+                  Muhammad Jahanzaib
+                </h3>
+
+                <div className="flex gap-3">
+                  <a
+                    href="https://www.linkedin.com/in/jahanzaibm29/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-xs text-mars-200 transition hover:text-white hover:underline"
+                  >
+                    LinkedIn ↗
+                  </a>
+
+                  <a
+                    href="https://github.com/jahanzaibm29"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-xs text-mars-200 transition hover:text-white hover:underline"
+                  >
+                    GitHub ↗
+                  </a>
+                </div>
+              </div>
+            </div>
+
+            <p className="mt-5 text-center text-[11px] text-white/40">
+              Built with ❤️ by the Marswalk team
+            </p>
+          </div>
+        </div>
+      )}
     </main>
   );
 }
